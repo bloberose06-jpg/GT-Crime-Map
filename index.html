@@ -1,1390 +1,172 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GT Crime Map</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-<style>
-  :root {
-    --bg: #0a0b0e;
-    --surface: #111318;
-    --surface2: #181c24;
-    --border: #232733;
-    --border2: #2e3445;
-    --text: #e8eaf0;
-    --text2: #8b93aa;
-    --text3: #4e566b;
-    --accent: #4f6ef7;
-    --accent2: #3d59e0;
-    --danger: #e84040;
-    --success: #2dd882;
-    --warn: #f5a623;
-
-    --theft: #f5a623;
-    --assault: #e84040;
-    --suspicious: #facc15;
-    --vandalism: #c084fc;
-    --drug: #4ade80;
-    --other: #94a3b8;
-  }
-
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* ── NAV ── */
-  nav {
-    height: 56px;
-    background: rgba(10,11,14,0.92);
-    backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 12px;
-    z-index: 1000;
-    flex-shrink: 0;
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 17px;
-    font-weight: 800;
-    letter-spacing: -0.3px;
-    margin-right: 8px;
-  }
-
-  .logo-icon {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, var(--accent), #7c3aed);
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 15px;
-  }
-
-  .nav-tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-  }
-
-  .nav-tab {
-    padding: 6px 16px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 600;
-    font-family: 'Syne', sans-serif;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    color: var(--text2);
-    transition: all 0.2s;
-    display: flex; align-items: center; gap: 6px;
-  }
-
-  .nav-tab.active {
-    background: var(--surface);
-    color: var(--text);
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  }
-
-  .nav-tab:hover:not(.active) { color: var(--text); }
-
-  nav .spacer { flex: 1; }
-
-  .btn-login {
-    padding: 8px 18px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 9px;
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex; align-items: center; gap: 7px;
-    transition: all 0.2s;
-  }
-
-  .btn-login:hover { background: var(--accent2); transform: translateY(-1px); }
-
-  #user-badge {
-    display: none;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 5px 12px 5px 8px;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  .user-avatar {
-    width: 26px; height: 26px;
-    background: linear-gradient(135deg, var(--accent), #7c3aed);
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 800;
-  }
-
-  .btn-logout {
-    background: none; border: none; color: var(--text3); cursor: pointer;
-    font-size: 13px; padding: 0 0 0 4px; transition: color 0.2s;
-  }
-  .btn-logout:hover { color: var(--danger); }
-
-  /* ── MAIN LAYOUT ── */
-  .main {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-    position: relative;
-  }
-
-  /* ── SIDEBAR ── */
-  .sidebar {
-    width: 320px;
-    flex-shrink: 0;
-    background: rgba(10,11,14,0.94);
-    backdrop-filter: blur(16px);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    z-index: 500;
-    overflow-y: auto;
-  }
-
-  .sidebar-section {
-    padding: 18px 16px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sidebar-title {
-    font-size: 18px;
-    font-weight: 800;
-    display: flex; align-items: center; gap: 9px;
-    margin-bottom: 12px;
-  }
-
-  .sidebar-title svg { color: var(--accent); }
-
-  .btn-report {
-    width: 100%;
-    padding: 11px 16px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: all 0.2s;
-  }
-
-  .btn-report:hover {
-    background: var(--accent);
-    border-color: var(--accent);
-    transform: translateY(-1px);
-  }
-
-  /* filter section */
-  .filter-label {
-    font-size: 10px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    color: var(--text3);
-    display: flex; align-items: center; gap: 6px;
-    margin-bottom: 12px;
-  }
-
-  .filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .filter-chip {
-    padding: 6px 13px;
-    border-radius: 7px;
-    font-size: 12px;
-    font-weight: 700;
-    font-family: 'Syne', sans-serif;
-    cursor: pointer;
-    border: 1.5px solid var(--border2);
-    background: transparent;
-    color: var(--text2);
-    display: flex; align-items: center; gap: 6px;
-    transition: all 0.18s;
-  }
-
-  .filter-chip .dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .filter-chip.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  .filter-chip:hover:not(.active) { border-color: var(--text2); color: var(--text); }
-
-  /* incidents list */
-  .incidents-list { padding: 12px 16px; flex: 1; }
-
-  .incidents-header {
-    font-size: 10px;
-    font-family: 'Space Mono', monospace;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    color: var(--text3);
-    margin-bottom: 10px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-
-  .incident-count {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    padding: 2px 8px;
-    border-radius: 5px;
-    font-size: 10px;
-    color: var(--text2);
-  }
-
-  .incident-card {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: all 0.18s;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .incident-card::before {
-    content: '';
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 3px;
-    border-radius: 3px 0 0 3px;
-  }
-
-  .incident-card:hover { border-color: var(--border2); transform: translateX(2px); }
-
-  .incident-card-top {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 5px;
-  }
-
-  .incident-badge {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 5px;
-    font-family: 'Space Mono', monospace;
-    letter-spacing: 0.5px;
-  }
-
-  .incident-card-title {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.3;
-    margin-bottom: 4px;
-  }
-
-  .incident-card-meta {
-    font-size: 11px;
-    color: var(--text3);
-    display: flex; align-items: center; gap: 8px;
-  }
-
-  .no-incidents {
-    text-align: center;
-    color: var(--text3);
-    font-size: 13px;
-    padding: 32px 0;
-  }
-
-  /* ── MAP ── */
-  #map {
-    flex: 1;
-    z-index: 1;
-  }
-
-  /* ── DASHBOARD ── */
-  #dashboard-view {
-    display: none;
-    flex: 1;
-    padding: 28px;
-    overflow-y: auto;
-    background: var(--bg);
-  }
-
-  .dashboard-header {
-    font-size: 22px;
-    font-weight: 800;
-    margin-bottom: 4px;
-  }
-
-  .dashboard-sub {
-    color: var(--text2);
-    font-size: 13px;
-    margin-bottom: 24px;
-  }
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 14px;
-    margin-bottom: 28px;
-  }
-
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .stat-card::after {
-    content: '';
-    position: absolute;
-    top: 0; right: 0;
-    width: 60px; height: 60px;
-    border-radius: 0 12px 0 60px;
-    opacity: 0.08;
-  }
-
-  .stat-label {
-    font-size: 10px;
-    font-family: 'Space Mono', monospace;
-    letter-spacing: 1.2px;
-    color: var(--text3);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-  }
-
-  .stat-value {
-    font-size: 32px;
-    font-weight: 800;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-
-  .stat-desc { font-size: 12px; color: var(--text2); }
-
-  .chart-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-  }
-
-  .chart-title {
-    font-size: 14px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 8px;
-  }
-
-  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
-
-  .bar-row {
-    display: flex; align-items: center; gap: 12px;
-  }
-
-  .bar-name {
-    width: 110px;
-    font-size: 12px;
-    font-weight: 600;
-    display: flex; align-items: center; gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .bar-track {
-    flex: 1;
-    height: 8px;
-    background: var(--surface2);
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    transition: width 0.6s cubic-bezier(0.34,1.56,0.64,1);
-  }
-
-  .bar-count {
-    font-size: 12px;
-    font-weight: 700;
-    font-family: 'Space Mono', monospace;
-    color: var(--text2);
-    width: 24px;
-    text-align: right;
-  }
-
-  /* ── MODALS ── */
-  .overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(6px);
-    z-index: 2000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-  }
-
-  .overlay.open { display: flex; }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 16px;
-    padding: 28px;
-    width: 100%;
-    max-width: 420px;
-    animation: modalIn 0.25s cubic-bezier(0.34,1.56,0.64,1);
-  }
-
-  @keyframes modalIn {
-    from { opacity: 0; transform: scale(0.92) translateY(12px); }
-    to   { opacity: 1; transform: scale(1) translateY(0); }
-  }
-
-  .modal-title {
-    font-size: 20px;
-    font-weight: 800;
-    margin-bottom: 4px;
-  }
-
-  .modal-sub {
-    font-size: 13px;
-    color: var(--text2);
-    margin-bottom: 24px;
-  }
-
-  .modal-tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 4px;
-    margin-bottom: 22px;
-  }
-
-  .modal-tab {
-    flex: 1;
-    padding: 8px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 700;
-    font-family: 'Syne', sans-serif;
-    cursor: pointer;
-    border: none;
-    background: transparent;
-    color: var(--text2);
-    transition: all 0.2s;
-    text-align: center;
-  }
-
-  .modal-tab.active {
-    background: var(--accent);
-    color: #fff;
-  }
-
-  .form-group { margin-bottom: 14px; }
-
-  .form-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text2);
-    margin-bottom: 6px;
-    display: block;
-    font-family: 'Space Mono', monospace;
-    letter-spacing: 0.5px;
-  }
-
-  .form-input, .form-select, .form-textarea {
-    width: 100%;
-    padding: 10px 13px;
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    color: var(--text);
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-    -webkit-appearance: none;
-  }
-
-  .form-input:focus, .form-select:focus, .form-textarea:focus {
-    border-color: var(--accent);
-  }
-
-  .form-select option { background: var(--surface2); }
-  .form-textarea { resize: vertical; min-height: 80px; }
-
-  .btn-primary {
-    width: 100%;
-    padding: 12px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-size: 14px;
-    font-weight: 800;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 6px;
-  }
-
-  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
-
-  .btn-secondary {
-    width: 100%;
-    padding: 11px;
-    background: transparent;
-    color: var(--text2);
-    border: 1.5px solid var(--border2);
-    border-radius: 10px;
-    font-family: 'Syne', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-top: 8px;
-  }
-
-  .btn-secondary:hover { border-color: var(--text2); color: var(--text); }
-
-  .modal-close {
-    position: absolute; top: 18px; right: 18px;
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 6px; width: 28px; height: 28px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: var(--text2); font-size: 16px;
-    transition: all 0.2s;
-  }
-
-  .modal-close:hover { color: var(--text); background: var(--border); }
-
-  /* report modal specifics */
-  .location-info {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 13px;
-    font-size: 12px;
-    color: var(--text2);
-    display: flex; align-items: center; gap: 8px;
-    margin-bottom: 14px;
-  }
-
-  .location-info span { color: var(--text); font-weight: 600; }
-
-  .category-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .cat-option {
-    padding: 10px 12px;
-    background: var(--surface2);
-    border: 1.5px solid var(--border);
-    border-radius: 9px;
-    cursor: pointer;
-    display: flex; align-items: center; gap: 8px;
-    font-size: 12px;
-    font-weight: 700;
-    transition: all 0.18s;
-    color: var(--text2);
-  }
-
-  .cat-option.selected {
-    border-color: var(--accent);
-    color: var(--text);
-    background: rgba(79,110,247,0.12);
-  }
-
-  .cat-option:hover:not(.selected) { border-color: var(--border2); color: var(--text); }
-
-  .toast {
-    position: fixed;
-    bottom: 24px; right: 24px;
-    background: var(--surface2);
-    border: 1px solid var(--border2);
-    border-radius: 10px;
-    padding: 12px 18px;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex; align-items: center; gap: 8px;
-    z-index: 9999;
-    animation: toastIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-  }
-
-  @keyframes toastIn {
-    from { opacity:0; transform: translateY(16px) scale(0.95); }
-    to   { opacity:1; transform: translateY(0) scale(1); }
-  }
-
-  /* Map custom popup */
-  .leaflet-popup-content-wrapper {
-    background: var(--surface2) !important;
-    border: 1px solid var(--border2) !important;
-    border-radius: 10px !important;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
-    color: var(--text) !important;
-    font-family: 'Syne', sans-serif !important;
-  }
-
-  .leaflet-popup-tip { background: var(--surface2) !important; }
-
-  .popup-title { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
-  .popup-meta { font-size: 11px; color: var(--text3); }
-  .popup-badge {
-    display: inline-block;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    font-family: 'Space Mono', monospace;
-  }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-  /* heatmap toggle */
-  .map-controls {
-    position: absolute;
-    top: 16px; right: 16px;
-    z-index: 600;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-
-  .map-btn {
-    background: rgba(10,11,14,0.9);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border2);
-    border-radius: 9px;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 700;
-    font-family: 'Syne', sans-serif;
-    color: var(--text2);
-    cursor: pointer;
-    display: flex; align-items: center; gap: 6px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .map-btn.active { background: rgba(79,110,247,0.25); border-color: var(--accent); color: var(--text); }
-  .map-btn:hover:not(.active) { border-color: var(--text3); color: var(--text); }
-
-  .picking-hint {
-    display: none;
-    position: absolute;
-    top: 16px; left: 50%; transform: translateX(-50%);
-    z-index: 600;
-    background: rgba(10,11,14,0.92);
-    border: 1px solid var(--accent);
-    border-radius: 9px;
-    padding: 9px 16px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--accent);
-    backdrop-filter: blur(12px);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(79,110,247,0.3); }
-    50% { box-shadow: 0 0 0 6px rgba(79,110,247,0); }
-  }
-
-  #map.picking { cursor: crosshair !important; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT Crime Map - Live</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        /* Mantengo tus estilos originales (abreviados para el ejemplo, pero usa los tuyos) */
+        :root {
+            --bg: #0a0b0e; --surface: #111318; --surface2: #181c24;
+            --border: #232733; --border2: #2e3445; --text: #e8eaf0;
+            --text2: #8b93aa; --text3: #4e566b; --accent: #4f6ef7;
+            --accent2: #3d59e0; --danger: #e84040; --success: #2dd882;
+            --warn: #f5a623;
+        }
+        /* ... (Copia aquí todo tu bloque <style> original completo) ... */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        nav { height: 56px; background: rgba(10,11,14,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; z-index: 1000; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .nav-tabs { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
+        .nav-tab { padding: 6px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text2); }
+        .nav-tab.active { background: var(--surface); color: var(--text); }
+        .btn-login { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; }
+        #map { flex: 1; z-index: 1; }
+        .main { flex: 1; display: flex; overflow: hidden; position: relative; }
+        /* Reutiliza todos tus estilos de modales, sidebar y chips aquí */
+    </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
-  <div class="logo">
-    <div class="logo-icon">🛡</div>
-    GT Crime Map
-  </div>
-  <div class="nav-tabs">
-    <button class="nav-tab active" id="tab-map" onclick="switchView('map')">
-      🗺 Vista Mapa
-    </button>
-    <button class="nav-tab" id="tab-dash" onclick="switchView('dashboard')">
-      📊 Dashboard
-    </button>
-  </div>
-  <div class="spacer"></div>
-  <button class="btn-login" id="btn-login-nav" onclick="openAuthModal()">
-    → Iniciar Sesión
-  </button>
-  <div id="user-badge">
-    <div class="user-avatar" id="user-initials">?</div>
-    <span id="user-name-display"></span>
-    <button class="btn-logout" onclick="logout()" title="Cerrar sesión">✕</button>
-  </div>
+    <div class="logo"><div class="logo-icon">🛡</div> GT Crime Map</div>
+    <div class="nav-tabs">
+        <button class="nav-tab active" id="tab-map" onclick="switchView('map')">🗺 Mapa</button>
+        <button class="nav-tab" id="tab-dash" onclick="switchView('dashboard')">📊 Dashboard</button>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn-login" id="btn-login-nav" onclick="openAuthModal()">Iniciar Sesión</button>
+    <div id="user-badge" style="display:none; align-items:center; gap:8px;">
+        <div class="user-avatar" id="user-initials">?</div>
+        <span id="user-name-display"></span>
+        <button onclick="logout()" style="background:none; border:none; color:var(--text3); cursor:pointer;">✕</button>
+    </div>
 </nav>
 
-<!-- MAIN -->
-<div class="main" id="main-container">
-
-  <!-- SIDEBAR -->
-  <div class="sidebar" id="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-title">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Incidentes
-      </div>
-      <button class="btn-report" onclick="openReportModal()">
-        📍 Reportar Nuevo Incidente
-      </button>
+<div class="main">
+    <div id="map-view" style="flex:1; display:flex;">
+        <div id="map"></div>
     </div>
-
-    <div class="sidebar-section">
-      <div class="filter-label">
-        <span>▼</span> FILTRAR POR CATEGORÍA
-      </div>
-      <div class="filters">
-        <button class="filter-chip active" data-cat="all" onclick="filterBy('all')">
-          Todos
-        </button>
-        <button class="filter-chip" data-cat="Robo" onclick="filterBy('Robo')">
-          <span class="dot" style="background:var(--theft)"></span>Robo
-        </button>
-        <button class="filter-chip" data-cat="Asalto" onclick="filterBy('Asalto')">
-          <span class="dot" style="background:var(--assault)"></span>Asalto
-        </button>
-        <button class="filter-chip" data-cat="Sospechoso" onclick="filterBy('Sospechoso')">
-          <span class="dot" style="background:var(--suspicious)"></span>Sospechoso
-        </button>
-        <button class="filter-chip" data-cat="Vandalismo" onclick="filterBy('Vandalismo')">
-          <span class="dot" style="background:var(--vandalism)"></span>Vandalismo
-        </button>
-        <button class="filter-chip" data-cat="Drogas" onclick="filterBy('Drogas')">
-          <span class="dot" style="background:var(--drug)"></span>Drogas
-        </button>
-        <button class="filter-chip" data-cat="Otro" onclick="filterBy('Otro')">
-          <span class="dot" style="background:var(--other)"></span>Otro
-        </button>
-      </div>
-    </div>
-
-    <div class="incidents-list" id="incidents-list">
-      <div class="incidents-header">
-        <span>INCIDENTES RECIENTES</span>
-        <span class="incident-count" id="incident-count">0</span>
-      </div>
-      <div id="incidents-cards">
-        <div class="no-incidents">No hay incidentes reportados aún.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAP VIEW -->
-  <div style="flex:1;position:relative;display:flex;" id="map-view">
-    <div id="map"></div>
-    <div class="map-controls">
-      <button class="map-btn active" id="heatmap-btn" onclick="toggleHeatmap()">
-        🔥 Heatmap
-      </button>
-      <button class="map-btn active" id="markers-btn" onclick="toggleMarkers()">
-        📍 Marcadores
-      </button>
-    </div>
-    <div class="picking-hint" id="picking-hint">📍 Haz clic en el mapa para seleccionar ubicación</div>
-  </div>
-
-  <!-- DASHBOARD VIEW -->
-  <div id="dashboard-view">
-    <div class="dashboard-header">📊 Panel de Control</div>
-    <div class="dashboard-sub">Estadísticas de incidentes reportados</div>
-
-    <div class="stats-grid" id="stats-grid"></div>
-
-    <div class="chart-section">
-      <div class="chart-title">📋 Incidentes por Categoría</div>
-      <div class="bar-chart" id="bar-chart"></div>
-    </div>
-
-    <div class="chart-section">
-      <div class="chart-title">📅 Últimas 24 horas</div>
-      <div id="recent-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-    </div>
-  </div>
-
-</div>
-
-<!-- AUTH MODAL -->
-<div class="overlay" id="auth-overlay">
-  <div class="modal" style="position:relative;">
-    <button class="modal-close" onclick="closeAuthModal()">✕</button>
-    <div class="modal-title" id="auth-title">Bienvenido</div>
-    <div class="modal-sub" id="auth-sub">Inicia sesión para reportar incidentes</div>
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
-      <button class="modal-tab" onclick="switchAuthTab('register')">Registrarse</button>
-    </div>
-
-    <div id="auth-login-form">
-      <div class="form-group">
-        <label class="form-label">CORREO</label>
-        <input class="form-input" type="email" id="login-email" placeholder="tu@correo.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">CONTRASEÑA</label>
-        <input class="form-input" type="password" id="login-pass" placeholder="••••••••">
-      </div>
-      <button class="btn-primary" onclick="doLogin()">→ Iniciar Sesión</button>
-    </div>
-
-    <div id="auth-register-form" style="display:none;">
-      <div class="form-group">
-        <label class="form-label">NOMBRE COMPLETO</label>
-        <input class="form-input" type="text" id="reg-name" placeholder="Tu nombre">
-      </div>
-      <div class="form-group">
-        <label class="form-label">CORREO</label>
-        <input class="form-input" type="email" id="reg-email" placeholder="tu@correo.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">CONTRASEÑA</label>
-        <input class="form-input" type="password" id="reg-pass" placeholder="Mínimo 6 caracteres">
-      </div>
-      <button class="btn-primary" onclick="doRegister()">✓ Crear Cuenta</button>
-    </div>
-
-    <button class="btn-secondary" onclick="closeAuthModal()">Cancelar</button>
-  </div>
-</div>
-
-<!-- REPORT MODAL -->
-<div class="overlay" id="report-overlay">
-  <div class="modal" style="position:relative;max-width:480px;">
-    <button class="modal-close" onclick="closeReportModal()">✕</button>
-    <div class="modal-title">📍 Reportar Incidente</div>
-    <div class="modal-sub">Selecciona la ubicación en el mapa o usa tu posición actual</div>
-
-    <div class="location-info" id="location-info">
-      📌 Ubicación: <span id="location-coords">No seleccionada</span>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button class="btn-secondary" style="width:auto;flex:1;margin:0;" onclick="pickFromMap()">
-        🗺 Seleccionar en Mapa
-      </button>
-      <button class="btn-secondary" style="width:auto;flex:1;margin:0;" onclick="useMyLocation()">
-        📡 Mi Ubicación
-      </button>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">CATEGORÍA</label>
-      <div class="category-grid">
-        <div class="cat-option" data-cat="Robo" onclick="selectCat('Robo')">
-          <span style="font-size:16px;">💰</span> Robo
-        </div>
-        <div class="cat-option" data-cat="Asalto" onclick="selectCat('Asalto')">
-          <span style="font-size:16px;">⚠️</span> Asalto
-        </div>
-        <div class="cat-option" data-cat="Sospechoso" onclick="selectCat('Sospechoso')">
-          <span style="font-size:16px;">👁</span> Sospechoso
-        </div>
-        <div class="cat-option" data-cat="Vandalismo" onclick="selectCat('Vandalismo')">
-          <span style="font-size:16px;">🖌</span> Vandalismo
-        </div>
-        <div class="cat-option" data-cat="Drogas" onclick="selectCat('Drogas')">
-          <span style="font-size:16px;">💊</span> Drogas
-        </div>
-        <div class="cat-option" data-cat="Otro" onclick="selectCat('Otro')">
-          <span style="font-size:16px;">🔍</span> Otro
-        </div>
-      </div>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">DESCRIPCIÓN</label>
-      <textarea class="form-textarea" id="report-desc" placeholder="Describe lo que viste..."></textarea>
-    </div>
-
-    <button class="btn-primary" onclick="submitReport()">📤 Enviar Reporte</button>
-    <button class="btn-secondary" onclick="closeReportModal()">Cancelar</button>
-  </div>
 </div>
 
 <script>
-// ─── STATE ────────────────────────────────────────────────────────
-let currentUser = JSON.parse(localStorage.getItem('gt_user') || 'null');
-let users = JSON.parse(localStorage.getItem('gt_users') || '[]');
-let incidents = JSON.parse(localStorage.getItem('gt_incidents') || '[]');
+// 1. CONFIGURACIÓN SUPABASE
+const SUPABASE_URL = 'https://oxwillxgejzjyxknuxle.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94d2lsbHhnZWp6anl4a251eGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTI0MDAsImV4cCI6MjA4OTg2ODQwMH0.ockUn86S6ndey6FvlFwr767mNFQBfNGtUleXCIEvsNg';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// 2. ESTADO GLOBAL
+let currentUser = null;
+let incidents = [];
 let map, heatLayer, markersLayer;
-let heatmapOn = true, markersOn = true;
 let activeFilter = 'all';
+let pickingLocation = false;
 let pendingLocation = null;
 let selectedCat = null;
-let pickingLocation = false;
 
-const CAT_COLORS = {
-  Robo: '#f5a623', Asalto: '#e84040', Sospechoso: '#facc15',
-  Vandalismo: '#c084fc', Drogas: '#4ade80', Otro: '#94a3b8'
-};
+const CAT_COLORS = { Robo: '#f5a623', Asalto: '#e84040', Sospechoso: '#facc15', Vandalismo: '#c084fc', Drogas: '#4ade80', Otro: '#94a3b8' };
+const CAT_ICONS = { Robo:'💰', Asalto:'⚠️', Sospechoso:'👁', Vandalismo:'🖌', Drogas:'💊', Otro:'🔍' };
 
-const CAT_ICONS = {
-  Robo:'💰', Asalto:'⚠️', Sospechoso:'👁', Vandalismo:'🖌', Drogas:'💊', Otro:'🔍'
-};
+// 3. CARGA DE DATOS DESDE SUPABASE
+async function loadIncidents() {
+    const { data, error } = await _supabase
+        .from('incidents')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-// ─── SEED DATA ────────────────────────────────────────────────────
-if (incidents.length === 0) {
-  const seedData = [
-    [14.634, -90.506, 'Robo', 'Robo de celular en el bus'],
-    [14.641, -90.513, 'Asalto', 'Asalto a peatón con arma'],
-    [14.628, -90.522, 'Sospechoso', 'Persona sospechosa merodeando'],
-    [14.619, -90.498, 'Vandalismo', 'Grafiti en parque'],
-    [14.645, -90.530, 'Robo', 'Robo de vehículo'],
-    [14.650, -90.516, 'Drogas', 'Venta de drogas en esquina'],
-    [14.637, -90.488, 'Asalto', 'Asalto a comercio'],
-    [14.622, -90.535, 'Robo', 'Robo en mercado'],
-    [14.655, -90.499, 'Sospechoso', 'Vehículo sospechoso'],
-    [14.630, -90.509, 'Otro', 'Pelea callejera'],
-  ];
-  incidents = seedData.map(([lat, lng, cat, desc], i) => ({
-    id: i+1,
-    lat, lng,
-    category: cat,
-    description: desc,
-    user: 'Sistema',
-    time: new Date(Date.now() - Math.random()*86400000*3).toISOString()
-  }));
-  saveIncidents();
+    if (error) {
+        console.error("Error al cargar:", error.message);
+    } else {
+        incidents = data;
+        renderMapData();
+        renderSidebarList();
+    }
 }
 
-function saveIncidents() { localStorage.setItem('gt_incidents', JSON.stringify(incidents)); }
+// 4. AUTENTICACIÓN REAL
+async function doRegister() {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-pass').value;
 
-// ─── MAP INIT ─────────────────────────────────────────────────────
-function initMap() {
-  map = L.map('map', {
-    center: [14.634, -90.507],
-    zoom: 12,
-    zoomControl: false
-  });
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '© OpenStreetMap © CARTO',
-    subdomains: 'abcd', maxZoom: 20
-  }).addTo(map);
-
-  L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-  markersLayer = L.layerGroup().addTo(map);
-  renderMapData();
-
-  map.on('click', function(e) {
-    if (!pickingLocation) return;
-    stopPickingLocation();
-    pendingLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
-    document.getElementById('location-coords').textContent =
-      `${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
-    document.getElementById('report-overlay').classList.add('open');
-  });
-}
-
-function renderMapData() {
-  markersLayer.clearLayers();
-  const filtered = activeFilter === 'all' ? incidents : incidents.filter(i => i.category === activeFilter);
-
-  filtered.forEach(inc => {
-    const color = CAT_COLORS[inc.category] || '#94a3b8';
-    const icon = CAT_ICONS[inc.category] || '🔍';
-    const t = new Date(inc.time).toLocaleString('es-GT');
-
-    const marker = L.circleMarker([inc.lat, inc.lng], {
-      radius: 8,
-      fillColor: color,
-      color: 'rgba(0,0,0,0.4)',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.9
+    const { data, error } = await _supabase.auth.signUp({
+        email, password: pass,
+        options: { data: { full_name: name } }
     });
 
-    marker.bindPopup(`
-      <div style="min-width:160px;">
-        <div class="popup-badge" style="background:${color}22;color:${color};">${icon} ${inc.category}</div>
-        <div class="popup-title">${inc.description}</div>
-        <div class="popup-meta">👤 ${inc.user} · ${t}</div>
-      </div>
-    `);
-
-    if (markersOn) markersLayer.addLayer(marker);
-  });
-
-  // Heatmap
-  if (heatLayer) { map.removeLayer(heatLayer); heatLayer = null; }
-  if (heatmapOn && filtered.length > 0) {
-    const pts = filtered.map(i => [i.lat, i.lng, 0.7]);
-    heatLayer = L.heatLayer(pts, {
-      radius: 35, blur: 25, maxZoom: 17,
-      gradient: { 0.2:'#1a1a7e', 0.4:'#00c8ff', 0.6:'#00ff88', 0.8:'#ffdd00', 1.0:'#ff2200' }
-    }).addTo(map);
-  }
+    if (error) return showToast('❌ ' + error.message, '#e84040');
+    showToast('✓ Revisa tu correo para confirmar', '#2dd882');
+    closeAuthModal();
 }
 
-function toggleHeatmap() {
-  heatmapOn = !heatmapOn;
-  document.getElementById('heatmap-btn').classList.toggle('active', heatmapOn);
-  renderMapData();
+async function doLogin() {
+    const email = document.getElementById('login-email').value.trim();
+    const pass = document.getElementById('login-pass').value;
+
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pass });
+
+    if (error) return showToast('❌ ' + error.message, '#e84040');
+    
+    currentUser = {
+        id: data.user.id,
+        name: data.user.user_metadata.full_name || data.user.email
+    };
+    updateUserUI();
+    closeAuthModal();
+    showToast('✓ Bienvenido', '#2dd882');
 }
 
-function toggleMarkers() {
-  markersOn = !markersOn;
-  document.getElementById('markers-btn').classList.toggle('active', markersOn);
-  renderMapData();
+// 5. ENVÍO DE REPORTES
+async function submitReport() {
+    if (!currentUser) return showToast('⚠️ Inicia sesión primero', '#f5a623');
+    if (!pendingLocation || !selectedCat) return showToast('❌ Falta ubicación o categoría', '#e84040');
+    
+    const desc = document.getElementById('report-desc').value.trim();
+
+    const { error } = await _supabase.from('incidents').insert([{
+        lat: pendingLocation.lat,
+        lng: pendingLocation.lng,
+        category: selectedCat,
+        description: desc,
+        user_id: currentUser.id,
+        user_name: currentUser.name // Asegúrate de tener esta columna en Supabase
+    }]);
+
+    if (error) {
+        showToast('❌ Error: ' + error.message, '#e84040');
+    } else {
+        showToast('✓ Reporte enviado', '#2dd882');
+        closeReportModal();
+        loadIncidents();
+    }
 }
 
-// ─── FILTERING ────────────────────────────────────────────────────
-function filterBy(cat) {
-  activeFilter = cat;
-  document.querySelectorAll('.filter-chip').forEach(c => {
-    c.classList.toggle('active', c.dataset.cat === cat);
-  });
-  renderMapData();
-  renderSidebarList();
-}
-
-// ─── SIDEBAR LIST ─────────────────────────────────────────────────
-function renderSidebarList() {
-  const filtered = activeFilter === 'all' ? incidents : incidents.filter(i => i.category === activeFilter);
-  const sorted = [...filtered].sort((a,b) => new Date(b.time)-new Date(a.time));
-  const container = document.getElementById('incidents-cards');
-  document.getElementById('incident-count').textContent = sorted.length;
-
-  if (sorted.length === 0) {
-    container.innerHTML = '<div class="no-incidents">No hay incidentes en esta categoría.</div>';
-    return;
-  }
-
-  container.innerHTML = sorted.slice(0,20).map(inc => {
-    const color = CAT_COLORS[inc.category] || '#94a3b8';
-    const icon = CAT_ICONS[inc.category] || '🔍';
-    const t = timeAgo(inc.time);
-    return `<div class="incident-card" onclick="focusIncident(${inc.lat},${inc.lng})" style="border-left-color:${color};">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${color};border-radius:3px 0 0 3px;"></div>
-      <div class="incident-card-top" style="padding-left:4px;">
-        <span class="incident-badge" style="background:${color}22;color:${color};">${icon} ${inc.category}</span>
-      </div>
-      <div class="incident-card-title" style="padding-left:4px;">${inc.description}</div>
-      <div class="incident-card-meta" style="padding-left:4px;">
-        <span>👤 ${inc.user}</span>
-        <span>· ${t}</span>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function focusIncident(lat, lng) {
-  map.flyTo([lat, lng], 16, { duration: 1.2 });
-}
-
-function timeAgo(iso) {
-  const s = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (s < 60) return 'ahora';
-  if (s < 3600) return `${Math.floor(s/60)}m`;
-  if (s < 86400) return `${Math.floor(s/3600)}h`;
-  return `${Math.floor(s/86400)}d`;
-}
-
-// ─── VIEW SWITCH ──────────────────────────────────────────────────
-function switchView(view) {
-  const mapView = document.getElementById('map-view');
-  const dashView = document.getElementById('dashboard-view');
-  const sidebar = document.getElementById('sidebar');
-  document.getElementById('tab-map').classList.toggle('active', view==='map');
-  document.getElementById('tab-dash').classList.toggle('active', view==='dashboard');
-
-  if (view === 'map') {
-    mapView.style.display = 'flex';
-    dashView.style.display = 'none';
-    sidebar.style.display = 'flex';
-    setTimeout(() => map.invalidateSize(), 50);
-  } else {
-    mapView.style.display = 'none';
-    dashView.style.display = 'block';
-    sidebar.style.display = 'none';
-    renderDashboard();
-  }
-}
-
-// ─── DASHBOARD ────────────────────────────────────────────────────
-function renderDashboard() {
-  const total = incidents.length;
-  const last24h = incidents.filter(i => Date.now() - new Date(i.time) < 86400000).length;
-  const topCat = Object.entries(
-    incidents.reduce((a,i) => { a[i.category]=(a[i.category]||0)+1; return a; }, {})
-  ).sort((a,b)=>b[1]-a[1])[0];
-
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card">
-      <div class="stat-label">TOTAL INCIDENTES</div>
-      <div class="stat-value" style="color:var(--accent)">${total}</div>
-      <div class="stat-desc">Reportados hasta hoy</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">ÚLTIMAS 24H</div>
-      <div class="stat-value" style="color:var(--warn)">${last24h}</div>
-      <div class="stat-desc">Incidentes recientes</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">MÁS FRECUENTE</div>
-      <div class="stat-value" style="color:${topCat ? CAT_COLORS[topCat[0]] : '#fff'};font-size:22px;">${topCat ? topCat[0] : '—'}</div>
-      <div class="stat-desc">${topCat ? topCat[1]+' casos' : ''}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">USUARIOS</div>
-      <div class="stat-value" style="color:var(--success)">${users.length}</div>
-      <div class="stat-desc">Registrados</div>
-    </div>
-  `;
-
-  const cats = ['Robo','Asalto','Sospechoso','Vandalismo','Drogas','Otro'];
-  const counts = cats.map(c => incidents.filter(i=>i.category===c).length);
-  const maxC = Math.max(...counts, 1);
-  const icons = {'Robo':'💰','Asalto':'⚠️','Sospechoso':'👁','Vandalismo':'🖌','Drogas':'💊','Otro':'🔍'};
-  document.getElementById('bar-chart').innerHTML = cats.map((cat,i) => `
-    <div class="bar-row">
-      <div class="bar-name">
-        ${icons[cat]} ${cat}
-      </div>
-      <div class="bar-track">
-        <div class="bar-fill" style="width:${(counts[i]/maxC*100)}%;background:${CAT_COLORS[cat]};"></div>
-      </div>
-      <div class="bar-count">${counts[i]}</div>
-    </div>
-  `).join('');
-
-  const recent = [...incidents].sort((a,b)=>new Date(b.time)-new Date(a.time)).slice(0,8);
-  document.getElementById('recent-list').innerHTML = recent.map(inc => {
-    const color = CAT_COLORS[inc.category]||'#94a3b8';
-    const icon = CAT_ICONS[inc.category]||'🔍';
-    return `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:11px 14px;display:flex;align-items:center;gap:12px;">
-      <span style="font-size:18px;">${icon}</span>
-      <div style="flex:1;">
-        <div style="font-size:13px;font-weight:700;">${inc.description}</div>
-        <div style="font-size:11px;color:var(--text3);">👤 ${inc.user} · ${new Date(inc.time).toLocaleString('es-GT')}</div>
-      </div>
-      <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;background:${color}22;color:${color};">${inc.category}</span>
-    </div>`;
-  }).join('');
-}
-
-// ─── AUTH ─────────────────────────────────────────────────────────
-function openAuthModal() {
-  document.getElementById('auth-overlay').classList.add('open');
-}
-
-function closeAuthModal() {
-  document.getElementById('auth-overlay').classList.remove('open');
-}
-
-function switchAuthTab(tab) {
-  document.querySelectorAll('.modal-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='login')||(i===1&&tab==='register')));
-  document.getElementById('auth-login-form').style.display = tab==='login'?'block':'none';
-  document.getElementById('auth-register-form').style.display = tab==='register'?'block':'none';
-}
-
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  const user = users.find(u => u.email === email && u.password === pass);
-  if (!user) { showToast('❌ Credenciales incorrectas', '#e84040'); return; }
-  currentUser = user;
-  localStorage.setItem('gt_user', JSON.stringify(user));
-  updateUserUI();
-  closeAuthModal();
-  showToast(`✓ Bienvenido, ${user.name}!`, '#2dd882');
-}
-
-function doRegister() {
-  const name = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
-  const pass = document.getElementById('reg-pass').value;
-  if (!name || !email || !pass) { showToast('❌ Completa todos los campos', '#e84040'); return; }
-  if (pass.length < 6) { showToast('❌ Contraseña muy corta', '#e84040'); return; }
-  if (users.find(u => u.email === email)) { showToast('❌ Correo ya registrado', '#e84040'); return; }
-  const user = { id: Date.now(), name, email, password: pass };
-  users.push(user);
-  localStorage.setItem('gt_users', JSON.stringify(users));
-  currentUser = user;
-  localStorage.setItem('gt_user', JSON.stringify(user));
-  updateUserUI();
-  closeAuthModal();
-  showToast(`✓ Cuenta creada, ${name}!`, '#2dd882');
-}
-
-function logout() {
-  currentUser = null;
-  localStorage.removeItem('gt_user');
-  updateUserUI();
-  showToast('👋 Sesión cerrada', '#94a3b8');
-}
-
-function updateUserUI() {
-  const badge = document.getElementById('user-badge');
-  const btnLogin = document.getElementById('btn-login-nav');
-  if (currentUser) {
-    badge.style.display = 'flex';
-    btnLogin.style.display = 'none';
-    document.getElementById('user-name-display').textContent = currentUser.name.split(' ')[0];
-    document.getElementById('user-initials').textContent = currentUser.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
-  } else {
-    badge.style.display = 'none';
-    btnLogin.style.display = 'flex';
-  }
-}
-
-// ─── REPORT ───────────────────────────────────────────────────────
-function openReportModal() {
-  if (!currentUser) {
-    showToast('⚠️ Inicia sesión para reportar', '#f5a623');
-    openAuthModal();
-    return;
-  }
-  selectedCat = null;
-  pendingLocation = null;
-  document.getElementById('location-coords').textContent = 'No seleccionada';
-  document.getElementById('report-desc').value = '';
-  document.querySelectorAll('.cat-option').forEach(el => el.classList.remove('selected'));
-  document.getElementById('report-overlay').classList.add('open');
-}
-
-function closeReportModal() {
-  document.getElementById('report-overlay').classList.remove('open');
-  stopPickingLocation();
-}
-
-function pickFromMap() {
-  document.getElementById('report-overlay').classList.remove('open');
-  pickingLocation = true;
-  document.getElementById('map').classList.add('picking');
-  document.getElementById('picking-hint').style.display = 'block';
-  switchView('map');
-}
-
-function stopPickingLocation() {
-  pickingLocation = false;
-  document.getElementById('map').classList.remove('picking');
-  document.getElementById('picking-hint').style.display = 'none';
-}
-
-function useMyLocation() {
-  if (!navigator.geolocation) { showToast('❌ Geolocalización no disponible', '#e84040'); return; }
-  navigator.geolocation.getCurrentPosition(pos => {
-    pendingLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-    document.getElementById('location-coords').textContent =
-      `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
-    showToast('📡 Ubicación obtenida', '#2dd882');
-  }, () => {
-    // fallback: use Guatemala City center
-    pendingLocation = { lat: 14.634 + (Math.random()-0.5)*0.02, lng: -90.507 + (Math.random()-0.5)*0.02 };
-    document.getElementById('location-coords').textContent =
-      `${pendingLocation.lat.toFixed(5)}, ${pendingLocation.lng.toFixed(5)}`;
-    showToast('📍 Usando ubicación aproximada', '#f5a623');
-  });
-}
-
-function selectCat(cat) {
-  selectedCat = cat;
-  document.querySelectorAll('.cat-option').forEach(el => {
-    el.classList.toggle('selected', el.dataset.cat === cat);
-  });
-}
-
-function submitReport() {
-  if (!pendingLocation) { showToast('❌ Selecciona una ubicación', '#e84040'); return; }
-  if (!selectedCat) { showToast('❌ Selecciona una categoría', '#e84040'); return; }
-  const desc = document.getElementById('report-desc').value.trim();
-  if (!desc) { showToast('❌ Agrega una descripción', '#e84040'); return; }
-
-  const inc = {
-    id: Date.now(),
-    lat: pendingLocation.lat,
-    lng: pendingLocation.lng,
-    category: selectedCat,
-    description: desc,
-    user: currentUser.name,
-    time: new Date().toISOString()
-  };
-
-  incidents.unshift(inc);
-  saveIncidents();
-  renderMapData();
-  renderSidebarList();
-  closeReportModal();
-  map.flyTo([inc.lat, inc.lng], 15, { duration: 1 });
-  showToast('✓ Incidente reportado', '#2dd882');
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg, color='#4f6ef7') {
-  const existing = document.querySelector('.toast');
-  if (existing) existing.remove();
-  clearTimeout(toastTimer);
-  const t = document.createElement('div');
-  t.className = 'toast';
-  t.style.borderLeftColor = color;
-  t.innerHTML = msg;
-  document.body.appendChild(t);
-  toastTimer = setTimeout(() => t.remove(), 3000);
-}
-
-// ─── INIT ─────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initMap();
-  updateUserUI();
-  renderSidebarList();
+// 6. INICIALIZACIÓN
+document.addEventListener('DOMContentLoaded', async () => {
+    initMap();
+    
+    // Verificar si hay sesión activa al recargar
+    const { data: { user } } = await _supabase.auth.getUser();
+    if (user) {
+        currentUser = {
+            id: user.id,
+            name: user.user_metadata.full_name || user.email
+        };
+        updateUserUI();
+    }
+    
+    await loadIncidents();
 });
+
+// ... (Copia aquí el resto de tus funciones: initMap, renderMapData, showToast, etc.) ...
 </script>
 </body>
 </html>
