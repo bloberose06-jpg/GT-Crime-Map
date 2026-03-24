@@ -61,10 +61,10 @@
 // 1. CONFIGURACIÓN SUPABASE
 const SUPABASE_URL = 'https://oxwillxgejzjyxknuxle.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94d2lsbHhnZWp6anl4a251eGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTI0MDAsImV4cCI6MjA4OTg2ODQwMH0.ockUn86S6ndey6FvlFwr767mNFQBfNGtUleXCIEvsNg';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // 2. ESTADO GLOBAL
-let currentUser = null;
+window.currentUser = null;
 let incidents = [];
 let map, heatLayer, markersLayer;
 let activeFilter = 'all';
