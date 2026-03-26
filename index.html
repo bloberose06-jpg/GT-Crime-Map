@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
-    <script src="<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
     
     <style>
         /* Mantengo tus estilos originales (abreviados para el ejemplo, pero usa los tuyos) */
@@ -97,14 +97,21 @@ async function doRegister() {
     const email = document.getElementById('reg-email').value.trim();
     const pass = document.getElementById('reg-pass').value;
 
-    const { data, error } = await _supabase.auth.signUp({
+    const { data, error } = await window._supabase.auth.signUp({
         email, password: pass,
         options: { data: { full_name: name } }
     });
 
     if (error) return showToast('❌ ' + error.message, '#e84040');
-    showToast('✓ Revisa tu correo para confirmar', '#2dd882');
+
+    // Auto login right after register
+    currentUser = {
+        id: data.user.id,
+        name: name || email
+    };
+    updateUserUI();
     closeAuthModal();
+    showToast('✓ Cuenta creada', '#2dd882');
 }
 
 async function doLogin() {
