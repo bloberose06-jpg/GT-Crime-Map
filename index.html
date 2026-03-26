@@ -259,9 +259,17 @@
 
 <script>
 // ==================== SUPABASE ====================
+// ==================== SUPABASE ====================
 const SUPABASE_URL = 'https://oxwillxgejzjyxknuxle.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94d2lsbHhnZWp6anl4a251eGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTI0MDAsImV4cCI6MjA4OTg2ODQwMH0.ockUn86S6ndey6FvlFwr767mNFQBfNGtUleXCIEvsNg';
-window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// Verificamos si la librería cargó antes de crear el cliente
+if (typeof supabase !== 'undefined') {
+    window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log("✅ Conexión con Supabase establecida");
+} else {
+    console.error("❌ ERROR: La librería de Supabase no cargó. Revisa tu conexión o desactiva AdBlock.");
+}
 
 // ==================== STATE ====================
 window.currentUser = null;
