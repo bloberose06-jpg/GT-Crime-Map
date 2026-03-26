@@ -9,9 +9,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
-    
+
     <style>
-        /* Mantengo tus estilos originales (abreviados para el ejemplo, pero usa los tuyos) */
         :root {
             --bg: #0a0b0e; --surface: #111318; --surface2: #181c24;
             --border: #232733; --border2: #2e3445; --text: #e8eaf0;
@@ -19,19 +18,97 @@
             --accent2: #3d59e0; --danger: #e84040; --success: #2dd882;
             --warn: #f5a623;
         }
-        /* ... (Copia aquí todo tu bloque <style> original completo) ... */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        nav { height: 56px; background: rgba(10,11,14,0.92); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; z-index: 1000; }
+
+        /* NAV */
+        nav { height: 56px; background: rgba(10,11,14,0.95); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 12px; z-index: 1000; flex-shrink: 0; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 800; }
-        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
         .nav-tabs { display: flex; gap: 4px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
-        .nav-tab { padding: 6px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text2); }
+        .nav-tab { padding: 6px 16px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text2); transition: all 0.2s; }
         .nav-tab.active { background: var(--surface); color: var(--text); }
-        .btn-login { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; }
-        #map { flex: 1; z-index: 1; }
+        .btn-login { padding: 8px 18px; background: var(--accent); color: #fff; border: none; border-radius: 9px; font-weight: 700; cursor: pointer; font-size: 13px; transition: background 0.2s; }
+        .btn-login:hover { background: var(--accent2); }
+        .user-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), #7c3aed); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+
+        /* LAYOUT */
         .main { flex: 1; display: flex; overflow: hidden; position: relative; }
-        /* Reutiliza todos tus estilos de modales, sidebar y chips aquí */
+        #map-view { flex: 1; display: flex; position: relative; }
+        #map { flex: 1; z-index: 1; }
+
+        /* SIDEBAR */
+        .sidebar { width: 300px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; overflow: hidden; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-header h3 { font-size: 14px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-report { width: 100%; padding: 10px; background: var(--accent); color: #fff; border: none; border-radius: 9px; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 10px; transition: background 0.2s; }
+        .btn-report:hover { background: var(--accent2); }
+        .filter-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .chip { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); transition: all 0.2s; }
+        .chip.active { border-color: var(--accent); color: var(--accent); background: rgba(79,110,247,0.1); }
+        .incident-list { flex: 1; overflow-y: auto; padding: 8px; }
+        .incident-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); transition: border-color 0.2s; }
+        .incident-item:hover { border-color: var(--border2); }
+        .incident-item-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+        .cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .incident-cat { font-size: 12px; font-weight: 700; }
+        .incident-time { font-size: 11px; color: var(--text3); margin-left: auto; }
+        .incident-desc { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .incident-count { font-size: 12px; color: var(--text3); padding: 4px 16px; }
+
+        /* MAP CONTROLS */
+        .map-controls { position: absolute; top: 12px; right: 12px; z-index: 100; display: flex; flex-direction: column; gap: 8px; }
+        .map-btn { padding: 8px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+        .map-btn:hover, .map-btn.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+        .pick-banner { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100; background: var(--accent); color: #fff; padding: 12px 24px; border-radius: 12px; font-weight: 700; font-size: 14px; display: none; }
+
+        /* MODALS */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .modal { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; width: 400px; max-width: 95vw; overflow: hidden; }
+        .modal-header { padding: 20px 24px 0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 18px; font-weight: 800; }
+        .modal-close { background: none; border: none; color: var(--text3); font-size: 20px; cursor: pointer; }
+        .modal-body { padding: 20px 24px 24px; }
+        .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 9px; padding: 4px; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 8px; border-radius: 6px; border: none; background: transparent; color: var(--text2); font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Syne', sans-serif; }
+        .tab.active { background: var(--surface); color: var(--text); }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 9px; color: var(--text); font-size: 14px; font-family: 'Syne', sans-serif; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .btn-submit { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 9px; font-weight: 700; font-size: 15px; cursor: pointer; font-family: 'Syne', sans-serif; transition: background 0.2s; }
+        .btn-submit:hover { background: var(--accent2); }
+
+        /* REPORT MODAL */
+        .cat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+        .cat-btn { padding: 10px 8px; border-radius: 9px; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); font-weight: 600; font-size: 12px; cursor: pointer; text-align: center; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+        .cat-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(79,110,247,0.12); }
+        .location-preview { padding: 10px 14px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 9px; font-size: 13px; color: var(--text2); margin-bottom: 14px; }
+        .location-preview.set { border-color: var(--success); color: var(--success); }
+
+        /* TOAST */
+        .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 12px 20px; border-radius: 10px; font-weight: 700; font-size: 14px; color: #fff; opacity: 0; transform: translateY(12px); transition: all 0.3s; pointer-events: none; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* DASHBOARD */
+        #dashboard-view { flex: 1; display: none; overflow-y: auto; padding: 24px; background: var(--bg); }
+        .dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .stat-card .label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+        .stat-card .value { font-size: 32px; font-weight: 800; margin-top: 8px; }
+        .cat-stats { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .cat-stats h3 { font-size: 14px; font-weight: 700; color: var(--text2); margin-bottom: 16px; }
+        .cat-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .cat-row-label { width: 90px; font-size: 13px; font-weight: 600; }
+        .cat-bar-bg { flex: 1; height: 8px; background: var(--surface2); border-radius: 4px; overflow: hidden; }
+        .cat-bar { height: 100%; border-radius: 4px; transition: width 0.6s; }
+        .cat-count { font-size: 12px; color: var(--text3); width: 30px; text-align: right; }
+
+        /* LEAFLET OVERRIDES */
+        .leaflet-container { background: #0a0b0e !important; }
+        .leaflet-tile { filter: brightness(0.7) saturate(0.4) !important; }
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: var(--surface); } ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -46,24 +123,147 @@
     <button class="btn-login" id="btn-login-nav" onclick="openAuthModal()">Iniciar Sesión</button>
     <div id="user-badge" style="display:none; align-items:center; gap:8px;">
         <div class="user-avatar" id="user-initials">?</div>
-        <span id="user-name-display"></span>
-        <button onclick="logout()" style="background:none; border:none; color:var(--text3); cursor:pointer;">✕</button>
+        <span id="user-name-display" style="font-size:13px; font-weight:600;"></span>
+        <button onclick="logout()" style="background:none; border:none; color:var(--text3); cursor:pointer; font-size:16px;">✕</button>
     </div>
 </nav>
 
 <div class="main">
+    <!-- MAP VIEW -->
     <div id="map-view" style="flex:1; display:flex;">
-        <div id="map"></div>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Incidentes Recientes <span id="incident-count-badge" style="color:var(--text3)"></span></h3>
+                <button class="btn-report" onclick="openReportModal()">+ Nuevo Incidente</button>
+            </div>
+            <div class="filter-chips">
+                <div class="chip active" onclick="setFilter('all', this)">Todos</div>
+                <div class="chip" onclick="setFilter('Robo', this)">💰 Robo</div>
+                <div class="chip" onclick="setFilter('Asalto', this)">⚠️ Asalto</div>
+                <div class="chip" onclick="setFilter('Sospechoso', this)">👁 Sospechoso</div>
+                <div class="chip" onclick="setFilter('Vandalismo', this)">🖌 Vandalismo</div>
+                <div class="chip" onclick="setFilter('Drogas', this)">💊 Drogas</div>
+                <div class="chip" onclick="setFilter('Otro', this)">🔍 Otro</div>
+            </div>
+            <div class="incident-list" id="incident-list">
+                <p class="incident-count">Cargando...</p>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div style="flex:1; position:relative;">
+            <div id="map"></div>
+            <div class="map-controls">
+                <button class="map-btn active" id="btn-heatmap" onclick="toggleLayer('heatmap')">🔥 Heatmap</button>
+                <button class="map-btn" id="btn-markers" onclick="toggleLayer('markers')">📍 Marcadores</button>
+            </div>
+            <div class="pick-banner" id="pick-banner">📍 Haz clic en el mapa para seleccionar ubicación</div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboard-view">
+        <div class="dash-grid">
+            <div class="stat-card"><div class="label">Total Incidentes</div><div class="value" id="stat-total" style="color:var(--accent)">0</div></div>
+            <div class="stat-card"><div class="label">Últimas 24h</div><div class="value" id="stat-24h" style="color:var(--warn)">0</div></div>
+            <div class="stat-card"><div class="label">Última Semana</div><div class="value" id="stat-week" style="color:var(--success)">0</div></div>
+            <div class="stat-card"><div class="label">Categoría Top</div><div class="value" id="stat-top" style="font-size:20px; margin-top:12px;">-</div></div>
+        </div>
+        <div class="cat-stats">
+            <h3>📊 Incidentes por Categoría</h3>
+            <div id="cat-bars"></div>
+        </div>
     </div>
 </div>
 
+<!-- AUTH MODAL -->
+<div class="modal-overlay" id="auth-modal" style="display:none;" onclick="if(event.target===this)closeAuthModal()">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>🛡 GT Crime Map</h2>
+            <button class="modal-close" onclick="closeAuthModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="tabs">
+                <button class="tab active" id="tab-login" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+                <button class="tab" id="tab-register" onclick="switchAuthTab('register')">Registrarse</button>
+            </div>
+            <!-- LOGIN FORM -->
+            <div id="login-form">
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="login-email" placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+                </div>
+                <button class="btn-submit" onclick="doLogin()">Iniciar Sesión</button>
+            </div>
+            <!-- REGISTER FORM -->
+            <div id="register-form" style="display:none;">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="reg-name" placeholder="Tu nombre">
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="reg-email" placeholder="tu@correo.com">
+                </div>
+                <div class="form-group">
+                    <label>Contraseña</label>
+                    <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')doRegister()">
+                </div>
+                <button class="btn-submit" onclick="doRegister()">Crear Cuenta</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="report-modal" style="display:none;" onclick="if(event.target===this)closeReportModal()">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>📍 Nuevo Incidente</h2>
+            <button class="modal-close" onclick="closeReportModal()">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Categoría</label>
+                <div class="cat-grid">
+                    <button class="cat-btn" onclick="selectCat('Robo', this)">💰 Robo</button>
+                    <button class="cat-btn" onclick="selectCat('Asalto', this)">⚠️ Asalto</button>
+                    <button class="cat-btn" onclick="selectCat('Sospechoso', this)">👁 Sospechoso</button>
+                    <button class="cat-btn" onclick="selectCat('Vandalismo', this)">🖌 Vandalismo</button>
+                    <button class="cat-btn" onclick="selectCat('Drogas', this)">💊 Drogas</button>
+                    <button class="cat-btn" onclick="selectCat('Otro', this)">🔍 Otro</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Ubicación</label>
+                <div class="location-preview" id="location-preview">Sin ubicación seleccionada</div>
+                <button class="map-btn" style="width:100%; margin-bottom:8px;" onclick="startPickLocation()">🗺 Seleccionar en el mapa</button>
+            </div>
+            <div class="form-group">
+                <label>Descripción (opcional)</label>
+                <textarea id="report-desc" placeholder="Describe lo que ocurrió..."></textarea>
+            </div>
+            <button class="btn-submit" onclick="submitReport()">Enviar Reporte</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
 <script>
-// 1. CONFIGURACIÓN SUPABASE
+// ==================== SUPABASE ====================
 const SUPABASE_URL = 'https://oxwillxgejzjyxknuxle.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94d2lsbHhnZWp6anl4a251eGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyOTI0MDAsImV4cCI6MjA4OTg2ODQwMH0.ockUn86S6ndey6FvlFwr767mNFQBfNGtUleXCIEvsNg';
 window._supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// 2. ESTADO GLOBAL
+// ==================== STATE ====================
 window.currentUser = null;
 let incidents = [];
 let map, heatLayer, markersLayer;
@@ -71,109 +271,309 @@ let activeFilter = 'all';
 let pickingLocation = false;
 let pendingLocation = null;
 let selectedCat = null;
+let showHeatmap = true;
+let showMarkers = false;
 
-const CAT_COLORS = { Robo: '#f5a623', Asalto: '#e84040', Sospechoso: '#facc15', Vandalismo: '#c084fc', Drogas: '#4ade80', Otro: '#94a3b8' };
-const CAT_ICONS = { Robo:'💰', Asalto:'⚠️', Sospechoso:'👁', Vandalismo:'🖌', Drogas:'💊', Otro:'🔍' };
+const CAT_COLORS = { Robo:'#f5a623', Asalto:'#e84040', Sospechoso:'#facc15', Vandalismo:'#c084fc', Drogas:'#4ade80', Otro:'#94a3b8' };
+const CAT_ICONS  = { Robo:'💰', Asalto:'⚠️', Sospechoso:'👁', Vandalismo:'🖌', Drogas:'💊', Otro:'🔍' };
 
-// 3. CARGA DE DATOS DESDE SUPABASE
-async function loadIncidents() {
-    const { data, error } = await _supabase
-        .from('incidents')
-        .select('*')
-        .order('created_at', { ascending: false });
+// ==================== MAP ====================
+function initMap() {
+    map = L.map('map', { zoomControl: false }).setView([14.6349, -90.5069], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19
+    }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    map.on('click', onMapClick);
+}
 
-    if (error) {
-        console.error("Error al cargar:", error.message);
+function onMapClick(e) {
+    if (!pickingLocation) return;
+    pendingLocation = e.latlng;
+    pickingLocation = false;
+    document.getElementById('pick-banner').style.display = 'none';
+    map.getContainer().style.cursor = '';
+    const preview = document.getElementById('location-preview');
+    preview.textContent = `📍 ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}`;
+    preview.className = 'location-preview set';
+    openReportModal();
+}
+
+function startPickLocation() {
+    closeReportModal();
+    pickingLocation = true;
+    document.getElementById('pick-banner').style.display = 'block';
+    map.getContainer().style.cursor = 'crosshair';
+}
+
+function renderMapData() {
+    // Clear markers
+    markersLayer.clearLayers();
+
+    const filtered = activeFilter === 'all' ? incidents : incidents.filter(i => i.category === activeFilter);
+
+    // Heatmap
+    if (heatLayer) map.removeLayer(heatLayer);
+    const heatPoints = filtered.map(i => [i.lat, i.lng, 0.8]);
+    heatLayer = L.heatLayer(heatPoints, { radius: 30, blur: 20, maxZoom: 17,
+        gradient: { 0.2:'#4f6ef7', 0.5:'#f5a623', 0.8:'#e84040', 1.0:'#ff0000' }
+    });
+    if (showHeatmap) heatLayer.addTo(map);
+
+    // Markers
+    if (showMarkers) {
+        filtered.forEach(inc => {
+            const color = CAT_COLORS[inc.category] || '#94a3b8';
+            const icon = L.divIcon({
+                html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.5);box-shadow:0 0 6px ${color}"></div>`,
+                className: '', iconSize: [12,12], iconAnchor: [6,6]
+            });
+            const marker = L.marker([inc.lat, inc.lng], { icon });
+            marker.bindPopup(`<b>${CAT_ICONS[inc.category]} ${inc.category}</b><br>${inc.description || 'Sin descripción'}<br><small>${formatTime(inc.created_at)}</small>`);
+            markersLayer.addLayer(marker);
+        });
+    }
+
+    renderSidebarList(filtered);
+    updateDashboard();
+}
+
+function toggleLayer(type) {
+    if (type === 'heatmap') {
+        showHeatmap = !showHeatmap;
+        document.getElementById('btn-heatmap').classList.toggle('active', showHeatmap);
+        if (showHeatmap) heatLayer && heatLayer.addTo(map);
+        else heatLayer && map.removeLayer(heatLayer);
     } else {
-        incidents = data;
+        showMarkers = !showMarkers;
+        document.getElementById('btn-markers').classList.toggle('active', showMarkers);
         renderMapData();
-        renderSidebarList();
     }
 }
 
-// 4. AUTENTICACIÓN REAL
-async function doRegister() {
-    const name = document.getElementById('reg-name').value.trim();
-    const email = document.getElementById('reg-email').value.trim();
-    const pass = document.getElementById('reg-pass').value;
+// ==================== SIDEBAR ====================
+function renderSidebarList(filtered) {
+    const list = document.getElementById('incident-list');
+    const data = filtered || incidents;
+    document.getElementById('incident-count-badge').textContent = `(${data.length})`;
+    if (!data.length) { list.innerHTML = '<p class="incident-count">No hay incidentes</p>'; return; }
+    list.innerHTML = data.slice(0, 50).map(inc => {
+        const color = CAT_COLORS[inc.category] || '#94a3b8';
+        return `<div class="incident-item" onclick="map.setView([${inc.lat},${inc.lng}], 16)">
+            <div class="incident-item-header">
+                <div class="cat-dot" style="background:${color}"></div>
+                <span class="incident-cat" style="color:${color}">${CAT_ICONS[inc.category]} ${inc.category}</span>
+                <span class="incident-time">${formatTime(inc.created_at)}</span>
+            </div>
+            <div class="incident-desc">${inc.description || 'Sin descripción'}</div>
+        </div>`;
+    }).join('');
+}
 
-    const { data, error } = await window._supabase.auth.signUp({
-        email, password: pass,
-        options: { data: { full_name: name } }
-    });
+function setFilter(cat, el) {
+    activeFilter = cat;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderMapData();
+}
 
-    if (error) return showToast('❌ ' + error.message, '#e84040');
+// ==================== DASHBOARD ====================
+function updateDashboard() {
+    const now = new Date();
+    const h24 = incidents.filter(i => (now - new Date(i.created_at)) < 86400000).length;
+    const week = incidents.filter(i => (now - new Date(i.created_at)) < 604800000).length;
+    document.getElementById('stat-total').textContent = incidents.length;
+    document.getElementById('stat-24h').textContent = h24;
+    document.getElementById('stat-week').textContent = week;
 
-    // Auto login right after register
-    currentUser = {
-        id: data.user.id,
-        name: name || email
-    };
-    updateUserUI();
-    closeAuthModal();
-    showToast('✓ Cuenta creada', '#2dd882');
+    const counts = {};
+    incidents.forEach(i => counts[i.category] = (counts[i.category] || 0) + 1);
+    const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+    document.getElementById('stat-top').textContent = top ? `${CAT_ICONS[top[0]]} ${top[0]}` : '-';
+
+    const max = Math.max(...Object.values(counts), 1);
+    document.getElementById('cat-bars').innerHTML = Object.entries(counts)
+        .sort((a,b) => b[1]-a[1])
+        .map(([cat, count]) => `
+            <div class="cat-row">
+                <div class="cat-row-label">${CAT_ICONS[cat]} ${cat}</div>
+                <div class="cat-bar-bg"><div class="cat-bar" style="width:${(count/max*100)}%;background:${CAT_COLORS[cat]}"></div></div>
+                <div class="cat-count">${count}</div>
+            </div>`).join('');
+}
+
+// ==================== DATA ====================
+async function loadIncidents() {
+    const { data, error } = await window._supabase.from('incidents').select('*').order('created_at', { ascending: false });
+    if (error) { console.error('Load error:', error); showToast('❌ Error al cargar datos', '#e84040'); return; }
+    incidents = data || [];
+    renderMapData();
+}
+
+// ==================== AUTH ====================
+function openAuthModal() { document.getElementById('auth-modal').style.display = 'flex'; }
+function closeAuthModal() { document.getElementById('auth-modal').style.display = 'none'; }
+
+function switchAuthTab(tab) {
+    document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
+    document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+    document.getElementById('tab-register').classList.toggle('active', tab === 'register');
 }
 
 async function doLogin() {
     const email = document.getElementById('login-email').value.trim();
     const pass = document.getElementById('login-pass').value;
+    if (!email || !pass) return showToast('❌ Completa todos los campos', '#e84040');
 
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password: pass });
-
+    const { data, error } = await window._supabase.auth.signInWithPassword({ email, password: pass });
     if (error) return showToast('❌ ' + error.message, '#e84040');
-    
-    currentUser = {
-        id: data.user.id,
-        name: data.user.user_metadata.full_name || data.user.email
-    };
+
+    window.currentUser = { id: data.user.id, name: data.user.user_metadata.full_name || data.user.email };
     updateUserUI();
     closeAuthModal();
-    showToast('✓ Bienvenido', '#2dd882');
+    showToast('✓ Bienvenido, ' + window.currentUser.name, '#2dd882');
 }
 
-// 5. ENVÍO DE REPORTES
-async function submitReport() {
-    if (!currentUser) return showToast('⚠️ Inicia sesión primero', '#f5a623');
-    if (!pendingLocation || !selectedCat) return showToast('❌ Falta ubicación o categoría', '#e84040');
-    
-    const desc = document.getElementById('report-desc').value.trim();
+async function doRegister() {
+    const name = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const pass = document.getElementById('reg-pass').value;
+    if (!email || !pass) return showToast('❌ Completa todos los campos', '#e84040');
+    if (pass.length < 6) return showToast('❌ Contraseña mínimo 6 caracteres', '#e84040');
 
-    const { error } = await _supabase.from('incidents').insert([{
+    const { data, error } = await window._supabase.auth.signUp({
+        email, password: pass, options: { data: { full_name: name } }
+    });
+    if (error) return showToast('❌ ' + error.message, '#e84040');
+
+    window.currentUser = { id: data.user.id, name: name || email };
+    updateUserUI();
+    closeAuthModal();
+    showToast('✓ Cuenta creada exitosamente', '#2dd882');
+}
+
+async function logout() {
+    await window._supabase.auth.signOut();
+    window.currentUser = null;
+    updateUserUI();
+    showToast('Sesión cerrada', '#94a3b8');
+}
+
+function updateUserUI() {
+    const badge = document.getElementById('user-badge');
+    const loginBtn = document.getElementById('btn-login-nav');
+    if (window.currentUser) {
+        badge.style.display = 'flex';
+        loginBtn.style.display = 'none';
+        document.getElementById('user-initials').textContent = window.currentUser.name.charAt(0).toUpperCase();
+        document.getElementById('user-name-display').textContent = window.currentUser.name;
+    } else {
+        badge.style.display = 'none';
+        loginBtn.style.display = 'block';
+    }
+}
+
+// ==================== REPORT MODAL ====================
+function openReportModal() {
+    if (!window.currentUser) { openAuthModal(); return; }
+    document.getElementById('report-modal').style.display = 'flex';
+}
+function closeReportModal() {
+    document.getElementById('report-modal').style.display = 'none';
+    pendingLocation = null;
+    selectedCat = null;
+    document.getElementById('location-preview').textContent = 'Sin ubicación seleccionada';
+    document.getElementById('location-preview').className = 'location-preview';
+    document.getElementById('report-desc').value = '';
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+}
+
+function selectCat(cat, el) {
+    selectedCat = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+async function submitReport() {
+    if (!window.currentUser) return showToast('⚠️ Inicia sesión primero', '#f5a623');
+    if (!pendingLocation) return showToast('❌ Selecciona una ubicación en el mapa', '#e84040');
+    if (!selectedCat) return showToast('❌ Selecciona una categoría', '#e84040');
+
+    const desc = document.getElementById('report-desc').value.trim();
+    const { error } = await window._supabase.from('incidents').insert([{
         lat: pendingLocation.lat,
         lng: pendingLocation.lng,
         category: selectedCat,
         description: desc,
-        user_id: currentUser.id,
-        user_name: currentUser.name // Asegúrate de tener esta columna en Supabase
+        user_id: window.currentUser.id
     }]);
 
     if (error) {
-        showToast('❌ Error: ' + error.message, '#e84040');
-    } else {
-        showToast('✓ Reporte enviado', '#2dd882');
-        closeReportModal();
-        loadIncidents();
+        console.error('Insert error:', error);
+        return showToast('❌ Error: ' + error.message, '#e84040');
     }
+
+    showToast('✓ Reporte enviado exitosamente', '#2dd882');
+    closeReportModal();
+    await loadIncidents();
 }
 
-// 6. INICIALIZACIÓN
+// ==================== UI HELPERS ====================
+function switchView(view) {
+    document.getElementById('map-view').style.display = view === 'map' ? 'flex' : 'none';
+    document.getElementById('dashboard-view').style.display = view === 'dashboard' ? 'block' : 'none';
+    document.getElementById('tab-map').classList.toggle('active', view === 'map');
+    document.getElementById('tab-dash').classList.toggle('active', view === 'dashboard');
+    if (view === 'dashboard') updateDashboard();
+    if (view === 'map') setTimeout(() => map && map.invalidateSize(), 100);
+}
+
+function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts), now = new Date();
+    const diff = (now - d) / 1000;
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return Math.floor(diff/60) + 'm';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h';
+    return Math.floor(diff/86400) + 'd';
+}
+
+let toastTimer;
+function showToast(msg, color = '#4f6ef7') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ==================== REALTIME ====================
+function initRealtime() {
+    window._supabase.channel('incidents-live')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, payload => {
+            incidents.unshift(payload.new);
+            renderMapData();
+            showToast('🔴 Nuevo incidente reportado', '#e84040');
+        })
+        .subscribe();
+}
+
+// ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
-    
-    // Verificar si hay sesión activa al recargar
-    const { data: { user } } = await _supabase.auth.getUser();
+
+    const { data: { user } } = await window._supabase.auth.getUser();
     if (user) {
-        currentUser = {
-            id: user.id,
-            name: user.user_metadata.full_name || user.email
-        };
+        window.currentUser = { id: user.id, name: user.user_metadata.full_name || user.email };
         updateUserUI();
     }
-    
-    await loadIncidents();
-});
 
-// ... (Copia aquí el resto de tus funciones: initMap, renderMapData, showToast, etc.) ...
+    await loadIncidents();
+    initRealtime();
+});
 </script>
 </body>
 </html>
